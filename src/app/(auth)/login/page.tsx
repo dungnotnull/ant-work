@@ -25,7 +25,13 @@ export default function LoginPage() {
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        toast.error("Server error. Please try again later.");
+        return;
+      }
 
       if (!data.success) {
         toast.error(data.error || "Login failed");
@@ -34,7 +40,7 @@ export default function LoginPage() {
 
       router.push("/dashboard");
     } catch {
-      toast.error("Network error");
+      toast.error("Unable to connect. Please check your connection.");
     } finally {
       setLoading(false);
     }

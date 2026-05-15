@@ -48,14 +48,15 @@ export async function POST(request: Request) {
     });
   } catch (error: unknown) {
     if (error instanceof ZodError) {
+      const message = error.issues.map((i) => i.message).join(", ");
       return NextResponse.json(
-        { success: false, error: error.issues },
+        { success: false, error: message },
         { status: 400 }
       );
     }
     console.error("Register error:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, error: "An unexpected error occurred. Please try again." },
       { status: 500 }
     );
   }
