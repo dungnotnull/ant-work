@@ -47,24 +47,34 @@ export default function LoginPage() {
   };
 
   return (
-    <div>
+    <div className="space-y-8">
       {/* Mobile-only logo */}
-      <div className="flex items-center gap-3 mb-8 lg:hidden">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+      <div className="flex items-center gap-3 lg:hidden">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
           <AntIcon size={24} className="text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-slate-900">DYM AntWork</h1>
-          <p className="text-xs text-slate-400 uppercase tracking-wider">Task System</p>
+          <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            DYM AntWork
+          </h1>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest">Task System</p>
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome back</h2>
-      <p className="text-slate-500 mt-1 mb-8">Sign in to your account to continue</p>
+      {/* Heading with accent bar */}
+      <div>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-8 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-purple-600" />
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome back</h2>
+        </div>
+        <p className="text-slate-500 pl-[28px]">Sign in to your account to continue</p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium text-slate-700">
+            Email
+          </Label>
           <Input
             id="email"
             type="email"
@@ -72,23 +82,25 @@ export default function LoginPage() {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             required
-            className="h-11 bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 transition-all"
+            className="h-12 bg-white/80 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all duration-300 placeholder:text-slate-300"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+          <Label htmlFor="password" className="text-sm font-medium text-slate-700">
+            Password
+          </Label>
           <Input
             id="password"
             type="password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
-            className="h-11 bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 transition-all"
+            className="h-12 bg-white/80 border-slate-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 transition-all duration-300 placeholder:text-slate-300"
           />
         </div>
         <Button
           type="submit"
-          className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-lg shadow-indigo-600/25 transition-all duration-200"
+          className="w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 active:translate-y-0"
           disabled={loading}
         >
           {loading ? (
@@ -105,9 +117,12 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      <p className="text-center text-sm text-slate-500 mt-6">
+      <p className="text-center text-sm text-slate-500">
         No account?{" "}
-        <Link href="/register" className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors">
+        <Link
+          href="/register"
+          className="text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
+        >
           Create one
         </Link>
       </p>

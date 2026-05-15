@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import KanbanBoard from "@/components/board/KanbanBoard";
 import AntAgentChat from "@/components/board/AntAgentChat";
@@ -27,27 +27,49 @@ interface Project {
 export default function BoardPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const { data: project, isLoading: projectLoading } = useQuery({
+  const { data: project, isLoading: projectLoading, isError: projectError } = useQuery({
     queryKey: ["project", id],
     queryFn: async () => {
       const res = await fetch(`/api/projects/${id}`);
       const d = await res.json();
-      return d.success ? (d.data as Project) : null;
+      if (!d.success) throw new Error(d.error || "Failed to load project");
+      return d.data as Project;
     },
   });
 
-  const { data: board, isLoading: boardLoading } = useQuery({
+  const { data: board, isLoading: boardLoading, isError: boardError } = useQuery({
     queryKey: ["board", id],
     queryFn: async () => {
       const res = await fetch(`/api/projects/${id}/board`);
       const d = await res.json();
-      return d.success ? (d.data as Record<string, TaskData[]>) : null;
+      if (!d.success) throw new Error(d.error || "Failed to load board");
+      return d.data as Record<string, TaskData[]>;
     },
   });
 
-  if (projectLoading || boardLoading || !project || !board) {
+  if (projectLoading || boardLoading) {
     return <PageLoader />;
+  }
+
+  if (projectError || boardError || !project || !board) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+          <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p className="text-sm text-slate-500">Failed to load board</p>
+        <button
+          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          onClick={() => { queryClient.invalidateQueries({ queryKey: ["project", id] }); queryClient.invalidateQueries({ queryKey: ["board", id] }); }}
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

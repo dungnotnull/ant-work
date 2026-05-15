@@ -26,15 +26,19 @@ if (!global.mongooseCache) {
 }
 
 export async function connectDB(): Promise<typeof mongoose> {
-  if (cache.conn) {
+  if (cache.conn && cache.conn.connection.readyState === 1) {
     return cache.conn;
   }
 
   if (!cache.promise) {
     const opts = {
       bufferCommands: false,
-      tls: true,
-      tlsAllowInvalidCertificates: true,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      heartbeatFrequencyMS: 10000,
     };
     cache.promise = mongoose.connect(uri, opts);
   }

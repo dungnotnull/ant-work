@@ -22,7 +22,8 @@ export default function TaskTimer({ taskId }: { taskId: string }) {
     queryFn: async () => {
       const res = await fetch(`/api/tasks/${taskId}/timer`);
       const data = await res.json();
-      return data.success ? (data.data as TimeSession | null) : null;
+      if (!data.success) throw new Error(data.error || "Failed to load timer");
+      return data.data as TimeSession | null;
     },
   });
 

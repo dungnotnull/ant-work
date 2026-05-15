@@ -51,9 +51,14 @@ export default function TaskDetailPage() {
   const [editNotes, setEditNotes] = useState("");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
 
-  const { data: task, isLoading: taskLoading } = useQuery({
+  const { data: task, isLoading: taskLoading, isError: taskError } = useQuery({
     queryKey: ["task", id],
-    queryFn: async () => { const res = await fetch(`/api/tasks/${id}`); const d = await res.json(); return d.success ? d.data : null; },
+    queryFn: async () => {
+      const res = await fetch(`/api/tasks/${id}`);
+      const d = await res.json();
+      if (!d.success) throw new Error(d.error || "Failed to load task");
+      return d.data;
+    },
   });
 
   const { data: subtasks = [] } = useQuery({
@@ -112,11 +117,27 @@ export default function TaskDetailPage() {
     onError: () => toast.error("Failed to create subtask"),
   });
 
-  if (taskLoading || !task) {
+  if (taskLoading) {
     return (
       <div className="page-enter">
         <div className="skeleton h-8 w-48 mb-6 rounded-lg" />
         <div className="skeleton h-64 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (taskError || !task) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+          <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p className="text-sm text-slate-500">Failed to load task</p>
+        <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["task", id] })}>
+          Retry
+        </Button>
       </div>
     );
   }

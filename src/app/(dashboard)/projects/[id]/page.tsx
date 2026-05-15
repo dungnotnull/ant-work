@@ -59,12 +59,13 @@ export default function ProjectDetailPage() {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
 
-  const { data: project, isLoading: projectLoading } = useQuery({
+  const { data: project, isLoading: projectLoading, isError: projectError } = useQuery({
     queryKey: ["project", id],
     queryFn: async () => {
       const res = await fetch(`/api/projects/${id}`);
       const data = await res.json();
-      return data.success ? (data.data as Project) : null;
+      if (!data.success) throw new Error(data.error || "Failed to load project");
+      return data.data as Project;
     },
   });
 
@@ -82,7 +83,8 @@ export default function ProjectDetailPage() {
     queryFn: async () => {
       const res = await fetch(`/api/projects/${id}/board`);
       const data = await res.json();
-      return data.success ? (data.data as Record<string, Task[]>) : null;
+      if (!data.success) throw new Error(data.error || "Failed to load board");
+      return data.data as Record<string, Task[]>;
     },
   });
 
@@ -134,8 +136,24 @@ export default function ProjectDetailPage() {
     },
   });
 
-  if (projectLoading || !project) {
+  if (projectLoading) {
     return <PageLoader />;
+  }
+
+  if (projectError || !project) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+          <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p className="text-sm text-slate-500">Failed to load project</p>
+        <Button variant="outline" size="sm" onClick={() => queryClient.invalidateQueries({ queryKey: ["project", id] })}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (

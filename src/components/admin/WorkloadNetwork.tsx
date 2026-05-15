@@ -33,12 +33,13 @@ export default function WorkloadNetwork() {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["workloadNetwork"],
     queryFn: async () => {
       const res = await fetch("/api/admin/workload-network");
       const json = await res.json();
-      return json.success ? json.data as { nodes: NetworkNode[]; links: NetworkLink[] } : null;
+      if (!json.success) throw new Error(json.error || "Failed to load network data");
+      return json.data as { nodes: NetworkNode[]; links: NetworkLink[] };
     },
   });
 
@@ -273,6 +274,14 @@ export default function WorkloadNetwork() {
     return (
       <div className="flex items-center justify-center h-full text-slate-400">
         Loading network data...
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex items-center justify-center h-full text-slate-400">
+        Failed to load network data
       </div>
     );
   }

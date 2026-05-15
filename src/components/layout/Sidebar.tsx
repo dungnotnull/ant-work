@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardLoading } from "@/contexts/LoadingContext";
 import { cn } from "@/lib/utils";
 import AntIcon from "@/components/AntIcon";
 import { Badge } from "../ui/badge";
@@ -21,6 +22,7 @@ const navigation = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
+  const { isDashboardLoading } = useDashboardLoading();
 
   const visibleNav = navigation.filter((item) => user && item.roles.includes(user.role));
 
@@ -77,15 +79,18 @@ export default function Sidebar() {
         ) : (
           visibleNav.map((item) => {
             const isActive = pathname.startsWith(item.href);
+            const disabled = isDashboardLoading && pathname === "/dashboard" && item.href !== "/dashboard";
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={disabled ? "" : item.href}
+                onClick={disabled ? (e) => e.preventDefault() : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200",
-                  isActive
+                  disabled && "opacity-40 pointer-events-none cursor-not-allowed",
+                  !disabled && isActive
                     ? "bg-indigo-600/20 text-indigo-400 shadow-sm shadow-indigo-500/10"
-                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                    : !disabled && "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                 )}
               >
                 <svg

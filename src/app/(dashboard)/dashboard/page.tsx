@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -8,6 +9,7 @@ import AntMascot from "@/components/AntMascot";
 import ActivityHeatmap from "@/components/dashboard/ActivityHeatmap";
 import EfficiencyLeaderboard from "@/components/dashboard/EfficiencyLeaderboard";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardLoading } from "@/contexts/LoadingContext";
 import { getGreeting } from "@/lib/utils/greeting";
 import { Badge } from "@/components/ui/badge";
 
@@ -53,22 +55,32 @@ function StatCard({
   icon,
   color,
   subtext,
+  loading,
 }: {
   label: string;
   value: number | string;
   icon: React.ReactNode;
   color: string;
   subtext?: string;
+  loading?: boolean;
 }) {
   return (
     <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-300">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
-          <p className={`text-3xl font-bold mt-2 ${color}`}>{value}</p>
-          {subtext && <p className="text-xs text-slate-400 mt-1">{subtext}</p>}
+          {loading ? (
+            <div className="skeleton h-9 w-16 mt-2 rounded-lg" />
+          ) : (
+            <p className={`text-3xl font-bold mt-2 ${color}`}>{value}</p>
+          )}
+          {loading ? (
+            <div className="skeleton h-3 w-24 mt-1.5 rounded" />
+          ) : subtext ? (
+            <p className="text-xs text-slate-400 mt-1">{subtext}</p>
+          ) : null}
         </div>
-        <div className={`w-10 h-10 rounded-xl ${color.includes("indigo") ? "bg-indigo-50" : color.includes("emerald") ? "bg-emerald-50" : color.includes("amber") ? "bg-amber-50" : color.includes("purple") ? "bg-purple-50" : "bg-slate-50"} flex items-center justify-center`}>
+        <div className={`w-10 h-10 rounded-xl ${loading ? "bg-slate-50 opacity-40" : color.includes("indigo") ? "bg-indigo-50" : color.includes("emerald") ? "bg-emerald-50" : color.includes("amber") ? "bg-amber-50" : color.includes("purple") ? "bg-purple-50" : "bg-slate-50"} flex items-center justify-center`}>
           {icon}
         </div>
       </div>
@@ -78,14 +90,15 @@ function StatCard({
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { setDashboardLoading } = useDashboardLoading();
 
-  const { data: dashboardStats } = useQuery({
+  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
     queryKey: ["dashboardStats"],
     enabled: !!user,
     queryFn: async () => {
       const projectsRes = await fetch("/api/projects");
       const projectsData = await projectsRes.json();
-      if (!projectsData.success) return { tasksDueToday: [] as Task[], stats: { totalTasks: 0, completed: 0, pendingSP: 0 }, recentTasks: [] as Task[] };
+      if (!projectsData.success) throw new Error("Failed to load projects");
 
       const allTasks: (Task & { assignees: { _id: string }[] })[] = [];
       for (const project of projectsData.data) {
@@ -93,7 +106,6 @@ export default function DashboardPage() {
         const boardData = await boardRes.json();
         if (boardData.success) {
           const flat = Object.values(boardData.data).flat() as (Task & { assignees: { _id: string }[] })[];
-          // Admin sees all tasks, others see only assigned tasks
           const mine = user?.role === "Admin"
             ? flat
             : flat.filter((t) => t.assignees?.some((a) => a._id === user!.id));
@@ -117,52 +129,69 @@ export default function DashboardPage() {
     },
   });
 
-  const { data: recentLogs = [] } = useQuery({
+  const { data: recentLogs = [], isLoading: logsLoading } = useQuery({
     queryKey: ["recentWorkLogs"],
     enabled: !!user,
     queryFn: async () => {
       const res = await fetch("/api/worklogs/me");
       const data = await res.json();
-      return data.success ? (data.data.slice(0, 5) as WorkLog[]) : [];
+      if (!data.success) throw new Error("Failed to load work logs");
+      return data.data.slice(0, 5) as WorkLog[];
     },
   });
 
-  const { data: activityData = [] } = useQuery<ActivityData[]>({
+  const { data: activityData = [], isLoading: activityLoading } = useQuery<ActivityData[]>({
     queryKey: ["activity"],
     enabled: !!user,
     queryFn: async () => {
       const res = await fetch("/api/activity");
       const data = await res.json();
-      return data.success ? data.data : [];
+      if (!data.success) throw new Error("Failed to load activity");
+      return data.data;
     },
   });
 
-  const { data: projects = [] } = useQuery<Project[]>({
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["projects"],
     queryFn: async () => {
       const res = await fetch("/api/projects");
       const data = await res.json();
-      return data.success ? data.data : [];
+      if (!data.success) throw new Error("Failed to load projects");
+      return data.data;
     },
   });
 
-  const { data: teams = [] } = useQuery<Team[]>({
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<Team[]>({
     queryKey: ["teams"],
     queryFn: async () => {
       const res = await fetch("/api/teams");
       const data = await res.json();
-      return data.success ? data.data : [];
+      if (!data.success) throw new Error("Failed to load teams");
+      return data.data;
     },
   });
+
+  const isPageLoading = statsLoading || logsLoading || activityLoading || projectsLoading || teamsLoading;
+
+  useEffect(() => {
+    setDashboardLoading(isPageLoading);
+    return () => setDashboardLoading(false);
+  }, [isPageLoading, setDashboardLoading]);
 
   const stats = dashboardStats?.stats ?? { totalTasks: 0, completed: 0, pendingSP: 0 };
   const tasksDueToday = dashboardStats?.tasksDueToday ?? [];
   const recentTasks = dashboardStats?.recentTasks ?? [];
-
   const totalMembers = teams.reduce((sum, t) => sum + (t.members?.length || 0), 0);
 
   return (
     <div className="page-enter">
+      {/* Top loading bar */}
+      {isPageLoading && (
+        <div className="fixed top-0 left-64 right-0 z-40 h-0.5 bg-indigo-100 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-[loading-bar_1.5s_ease-in-out_infinite]" />
+        </div>
+      )}
+
       {/* Header with mascot */}
       <div className="flex items-start justify-between mb-8">
         <div>
@@ -197,6 +226,7 @@ export default function DashboardPage() {
           label="Total Tasks"
           value={stats.totalTasks}
           color="text-slate-900"
+          loading={statsLoading}
           icon={<svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
         />
         <StatCard
@@ -204,6 +234,7 @@ export default function DashboardPage() {
           value={stats.completed}
           color="text-emerald-600"
           subtext={stats.totalTasks > 0 ? `${Math.round((stats.completed / stats.totalTasks) * 100)}% done` : undefined}
+          loading={statsLoading}
           icon={<svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
         />
         <StatCard
@@ -211,6 +242,7 @@ export default function DashboardPage() {
           value={stats.pendingSP}
           color="text-indigo-600"
           subtext="Story points remaining"
+          loading={statsLoading}
           icon={<svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
         />
         <StatCard
@@ -218,6 +250,7 @@ export default function DashboardPage() {
           value={tasksDueToday.length}
           color="text-amber-600"
           subtext={tasksDueToday.length > 0 ? "Needs attention" : "All clear"}
+          loading={statsLoading}
           icon={<svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
         />
       </div>
@@ -229,6 +262,7 @@ export default function DashboardPage() {
           value={projects.length}
           color="text-purple-600"
           subtext="Active projects"
+          loading={projectsLoading}
           icon={<svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>}
         />
         <StatCard
@@ -236,6 +270,7 @@ export default function DashboardPage() {
           value={teams.length}
           color="text-blue-600"
           subtext={`${totalMembers} members total`}
+          loading={teamsLoading}
           icon={<svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>}
         />
         <StatCard
@@ -243,13 +278,21 @@ export default function DashboardPage() {
           value={stats.totalTasks > 0 ? `${Math.round((stats.completed / stats.totalTasks) * 100)}%` : "0%"}
           color="text-emerald-600"
           subtext={`${stats.completed} of ${stats.totalTasks} tasks`}
+          loading={statsLoading}
           icon={<svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>}
         />
       </div>
 
       {/* Activity Heatmap */}
       <div className="mb-6">
-        <ActivityHeatmap data={activityData} />
+        {activityLoading ? (
+          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-sm">
+            <div className="skeleton h-4 w-32 mb-4 rounded" />
+            <div className="skeleton h-24 w-full rounded-lg" />
+          </div>
+        ) : (
+          <ActivityHeatmap data={activityData} />
+        )}
       </div>
 
       {/* Two-column layout */}
@@ -260,7 +303,18 @@ export default function DashboardPage() {
             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
             Active Tasks
           </h2>
-          {recentTasks.length === 0 ? (
+          {statsLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white border border-slate-200/80 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="skeleton h-5 w-16 rounded" />
+                    <div className="skeleton h-4 w-40 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : recentTasks.length === 0 ? (
             <div className="bg-white border border-slate-200/80 rounded-xl p-8 text-center shadow-sm">
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                 <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -298,7 +352,19 @@ export default function DashboardPage() {
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Recent Work Logs
           </h2>
-          {recentLogs.length === 0 ? (
+          {logsLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white border border-slate-200/80 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="skeleton h-4 w-32 rounded" />
+                    <div className="skeleton h-4 w-8 rounded" />
+                  </div>
+                  <div className="skeleton h-3 w-20 mt-2 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : recentLogs.length === 0 ? (
             <div className="bg-white border border-slate-200/80 rounded-xl p-8 text-center shadow-sm">
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
                 <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

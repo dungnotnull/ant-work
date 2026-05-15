@@ -24,14 +24,24 @@ export default function EpicDetailPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
 
-  const { data: project } = useQuery({
+  const { data: project, isError: projectError } = useQuery({
     queryKey: ["project", id],
-    queryFn: async () => { const res = await fetch(`/api/projects/${id}`); const d = await res.json(); return d.success ? d.data : null; },
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${id}`);
+      const d = await res.json();
+      if (!d.success) throw new Error(d.error || "Failed to load project");
+      return d.data;
+    },
   });
 
-  const { data: epic, isLoading: epicLoading } = useQuery({
+  const { data: epic, isLoading: epicLoading, isError: epicError } = useQuery({
     queryKey: ["epic", epicId],
-    queryFn: async () => { const res = await fetch(`/api/epics/${epicId}`); const d = await res.json(); return d.success ? d.data : null; },
+    queryFn: async () => {
+      const res = await fetch(`/api/epics/${epicId}`);
+      const d = await res.json();
+      if (!d.success) throw new Error(d.error || "Failed to load epic");
+      return d.data;
+    },
   });
 
   const { data: stories = [] } = useQuery({
@@ -55,8 +65,27 @@ export default function EpicDetailPage() {
     },
   });
 
-  if (!project || epicLoading || !epic) {
+  if (epicLoading) {
     return <PageLoader />;
+  }
+
+  if (projectError || epicError || !project || !epic) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+          <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p className="text-sm text-slate-500">Failed to load epic</p>
+        <button
+          className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+          onClick={() => { queryClient.invalidateQueries({ queryKey: ["project", id] }); queryClient.invalidateQueries({ queryKey: ["epic", epicId] }); }}
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

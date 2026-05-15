@@ -19,9 +19,10 @@ export function useAuth() {
     queryFn: async () => {
       const res = await fetch("/api/users/me");
       const data = await res.json();
-      if (!data.success) return null;
+      if (!data.success) throw new Error("Not authenticated");
       return data.data as User;
     },
+    retry: false,
   });
 
   const logoutMutation = useMutation({
