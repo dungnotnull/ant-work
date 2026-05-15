@@ -1,8 +1,22 @@
-# DYM AntWork
+<div align="center">
+<div>
+  <h1 style="
+    color: #0B0E23; 
+    -webkit-text-stroke: 0.5px white; 
+    font-weight: 800;
+  ">
+    AntWork 
+    <small style="font-size:0.5em; -webkit-text-stroke: 0.5px white;">v.1.0.1</small>
+  </h1>
+</div>
+  <p>Internal project management tool for <strong>team/company/enterprise</strong> scope. Multi-team task tracking with Kanban boards, calendar timelines, daily reports, performance metrics, and an AI-powered board assistant.</p>
+  <small>_Created by Hoang Dung</small>
+  <br>
+  <br>
+  <img src="public/media/login_screen.jpg" alt="AntWork Interface" width="800">
+</div>
 
-Internal project management tool for **DYM Vietnam**. Multi-team task tracking with Kanban boards, calendar timelines, daily reports, performance metrics, and an AI-powered board assistant.
-
-## Features
+## Features (current stage - v1.0.1)
 
 ### Task Management
 - **Hierarchical structure**: Project -> Epic -> Story -> Task -> Sub-task
@@ -15,8 +29,8 @@ Internal project management tool for **DYM Vietnam**. Multi-team task tracking w
 - Chat-based interface on the Kanban board (right sidebar)
 - Natural language commands in **English and Vietnamese**
 - Example: *"Move 'Setup Middleware' to In Review"* or *"Chuyen task A sang Done"*
-- Powered by Groq (Llama 3.3 70B) with OpenRouter (Gemini 2.0 Flash) fallback
-- Strictly limited to status changes only -- no task creation, deletion, or field modification
+- Powered by some AI models with fallback mechanism.
+- Other features will come soon
 
 ### Dashboard & Reports
 - Time-based Japanese greeting (Ohayou/Konnichiwa/Konbanwa/Oyasuminasai)
